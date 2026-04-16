@@ -1,0 +1,1 @@
+# hiragana_bingo_for_techers
