@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hiragana Caller</title>
+  <style>
+    :root {
+      --bg: #f7f7f7;
+      --card: #ffffff;
+      --line: #d9d9d9;
+      --text: #222;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --muted: #666;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      text-align: center;
+      font-size: clamp(24px, 5vw, 36px);
+    }
+
+    .desc {
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 0 0 16px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      background: var(--accent);
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    .reset-btn {
+      background: var(--danger);
+    }
+
+    .reset-btn:hover {
+      background: var(--danger-hover);
+    }
+
+    .display {
+      border: 2px solid var(--line);
+      border-radius: 24px;
+      background: #fcfcfc;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      padding: 12px;
+    }
+
+    .kana {
+      font-size: clamp(72px, 22vw, 160px);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .info {
+      text-align: center;
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .history-box {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
+
+    .history-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .history {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+      gap: 8px;
+    }
+
+    .history-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      text-align: center;
+      padding: 8px 4px;
+      font-size: 24px;
+      min-height: 46px;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .display {
+        min-height: 180px;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Hiragana Caller</h1>
+      <p class="desc">
+        Teacher screen for bingo.<br>
+        Click <strong>Next</strong> to show one random hiragana.<br>
+        A character will not appear again unless you press <strong>Reset</strong>.
+      </p>
+
+      <div class="controls">
+        <button id="nextBtn">Next</button>
+        <button id="resetBtn" class="reset-btn">Reset</button>
+      </div>
+
+      <div class="display">
+        <div id="kanaDisplay" class="kana">-</div>
+      </div>
+
+      <div id="info" class="info">Remaining: 71</div>
+
+      <div class="history-box">
+        <div class="history-title">Already Shown</div>
+        <div id="history" class="history"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const allKana = [
+      // Basic
+      "あ","い","う","え","お",
+      "か","き","く","け","こ",
+      "さ","し","す","せ","そ",
+      "た","ち","つ","て","と",
+      "な","に","ぬ","ね","の",
+      "は","ひ","ふ","へ","ほ",
+      "ま","み","む","め","も",
+      "や","ゆ","よ",
+      "ら","り","る","れ","ろ",
+      "わ","を","ん",
+      // Dakuon
+      "が","ぎ","ぐ","げ","ご",
+      "ざ","じ","ず","ぜ","ぞ",
+      "だ","ぢ","づ","で","ど",
+      "ば","び","ぶ","べ","ぼ",
+      // Handakuon
+      "ぱ","ぴ","ぷ","ぺ","ぽ"
+    ];
+
+    let remaining = [];
+    let shown = [];
+
+    const kanaDisplay = document.getElementById("kanaDisplay");
+    const info = document.getElementById("info");
+    const history = document.getElementById("history");
+    const nextBtn = document.getElementById("nextBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function updateInfo() {
+      info.textContent = `Remaining: ${remaining.length}`;
+    }
+
+    function renderHistory() {
+      history.innerHTML = "";
+      shown.forEach(kana => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.textContent = kana;
+        history.appendChild(item);
+      });
+    }
+
+    function resetAll() {
+      remaining = shuffle(allKana);
+      shown = [];
+      kanaDisplay.textContent = "-";
+      renderHistory();
+      updateInfo();
+    }
+
+    function showNext() {
+      if (remaining.length === 0) {
+        kanaDisplay.textContent = "END";
+        info.textContent = "Remaining: 0";
+        return;
+      }
+
+      const nextKana = remaining.pop();
+      shown.push(nextKana);
+      kanaDisplay.textContent = nextKana;
+      renderHistory();
+      updateInfo();
+    }
+
+    nextBtn.addEventListener("click", showNext);
+    resetBtn.addEventListener("click", resetAll);
+
+    resetAll();
+  </script>
+</body>
+</html>
